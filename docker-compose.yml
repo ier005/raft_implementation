@@ -1,0 +1,31 @@
+version: "3"
+
+services:
+    node0:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 0'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node1:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 1'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+        #depends_on:
+        #    - master
+
+    node2:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 2'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src

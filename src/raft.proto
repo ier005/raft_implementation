@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+message VoteRequest {                // type - 1
+    required uint32 term = 1;        //(没有16位类型，但PB采用变长编码)
+    required uint32 candidateId = 2;
+}
+
+message VoteReply {                // type - 2
+    required uint32 term = 1;
+    required bool voteGranted = 2;
+}
+
+message LeaderBeat {                // type - 3
+    required uint32 term = 1;
+    required uint32 leaderId = 2;
+}
+
