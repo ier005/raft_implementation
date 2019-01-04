@@ -29,3 +29,121 @@ services:
         volumes:
             - ./src/:/src/
         working_dir: /src
+
+    node3:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 3'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node4:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 4'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node5:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 5'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node6:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 6'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node7:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 7'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node8:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 8'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node9:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 9'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node10:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 10'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node11:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 11'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node12:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 12'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node13:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 13'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node14:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 14'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+
+    node15:
+        image: protobuf:dos
+        build: ./docker-image
+        command: sh -c 'make && ./raft 15'
+        entrypoint: ''
+        volumes:
+            - ./src/:/src/
+        working_dir: /src
+

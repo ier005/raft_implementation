@@ -15,11 +15,10 @@
 
 #define BUF_SIZE 1024
 #define ELECTION_PORT 2333
-#define BROADCAST_TIME 20  //ms
+#define BROADCAST_TIME 20   //ms
 #define ELECTION_TIMEOUT 200
 
-using namespace std;
-
+using namespace std; 
 enum {
     FOLLOWER,
     CANDIDATE,
@@ -40,8 +39,8 @@ int state;
 int current_term;
 int leader_id = -1;
 int node_num;
+//int listen_fd;
 int listen_fd;
-int send_fd;
 struct sockaddr_in self_addr;
 int recv_hb;
 
@@ -91,12 +90,12 @@ int set_timer(int n, void (*handler)(int))
 
 void follower_timeout(int n)
 {
-    sendto(send_fd, "\x04\x00", 2, 0, (const struct sockaddr *)&self_addr, sizeof(self_addr));
+    sendto(listen_fd, "\x04\x00", 2, 0, (const struct sockaddr *)&self_addr, sizeof(self_addr));
 }
 
 void candidate_timeout(int n)
 {
-    sendto(send_fd, "\x05\x00", 2, 0, (const struct sockaddr *)&self_addr, sizeof(self_addr));
+    sendto(listen_fd, "\x05\x00", 2, 0, (const struct sockaddr *)&self_addr, sizeof(self_addr));
 }
 
 void leader_heartbeat(int n)
@@ -123,16 +122,17 @@ void leader_heartbeat(int n)
             continue;
         }
         addr.sin_addr = ip;
-        sendto(send_fd, buf, lb.ByteSizeLong() + 2, 0, (const struct sockaddr *)&addr, sizeof(addr));
+        sendto(listen_fd, buf, lb.ByteSizeLong() + 2, 0, (const struct sockaddr *)&addr, sizeof(addr));
     }
 
+    set_timer(BROADCAST_TIME * 1000, leader_heartbeat);
 }
 
 
 int follower()
 {
-    cout << "[INFO] STATE: Follower" << endl;
-    set_timer(ELECTION_TIMEOUT * 1000, follower_timeout);
+    cerr << "[INFO] STATE: Follower" << endl;
+    set_timer(ELECTION_TIMEOUT * 1000 + rand() % 100, follower_timeout);
 
     while (1) {
         struct sockaddr_in client_addr;
@@ -142,8 +142,12 @@ int follower()
         int size;
         int break_flag = 0;
 
+        ////
+        char str[20];
+
+        len = sizeof(client_addr);
         if ((size = recvfrom(listen_fd, buf, BUF_SIZE, 0, (struct sockaddr *)&client_addr, &len)) <= 0) {
-            cerr << "[WARNING] Recv data failed" << endl;
+            perror("[WARNING] Recv data failed: ");
             continue;
         }
         memcpy(&type, buf, 2);
@@ -159,12 +163,18 @@ int follower()
                 vrep.set_votegranted(true);
                 *(short*)buf = voteReply;
                 vrep.SerializeToArray(buf + 2, vrep.ByteSizeLong());
-                sendto(send_fd, buf, vrep.ByteSizeLong() + 2, 0, (const struct sockaddr *)&client_addr, sizeof(client_addr));
+                sendto(listen_fd, buf, vrep.ByteSizeLong() + 2, 0, (const struct sockaddr *)&client_addr, sizeof(client_addr));
+                set_timer(ELECTION_TIMEOUT * 1000 + rand() % 100, follower_timeout); //////////////////////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                cerr << "[INFO][Follower] Vote for " << node_list[vr.candidateid()]  << ", term: " << current_term << endl;
                 break;
             }
             
-            case voteReply:
+            case voteReply: {
+                VoteReply vrep;
+                vrep.ParseFromArray(buf + 2, size - 2);
+                //cerr << "[INFO][Follower] Received VoteReply, term: " << vrep.term() << ", current_term: " << current_term << endl;
                 break;
+            }
 
             case leaderBeat: {
                 LeaderBeat lb;
@@ -173,7 +183,7 @@ int follower()
                     current_term = lb.term();
                     leader_id = lb.leaderid();
                     recv_hb = 1;
-                    cout << "[INFO] The leader is " << node_list[leader_id] << endl;
+                    //cerr << "[INFO][Follower] The leader is " << node_list[leader_id] << endl;
                 }
                 break;
             }
@@ -181,7 +191,7 @@ int follower()
             case followerTimeout: {
                 if (recv_hb) {
                     recv_hb = 0;
-                    set_timer(ELECTION_TIMEOUT * 1000, follower_timeout);
+                    set_timer(ELECTION_TIMEOUT * 1000 + rand() % 100, follower_timeout);
                 } else {
                     state = CANDIDATE;
                     break_flag = 1;
@@ -203,7 +213,7 @@ int follower()
 
 void candidate()
 {
-    cout << "[INFO] STATE: Candidate" << endl;
+    cerr << "[INFO] STATE: Candidate, term: " << current_term + 1 << endl;
     int vote_count = 1;
     if (node_num == 1) {
         state = LEADER;
@@ -232,7 +242,7 @@ void candidate()
             continue;
         }
         addr.sin_addr = ip;
-        sendto(send_fd, buf, vr.ByteSizeLong() + 2, 0, (const struct sockaddr *)&addr, sizeof(addr));
+        sendto(listen_fd, buf, vr.ByteSizeLong() + 2, 0, (const struct sockaddr *)&addr, sizeof(addr));
     }
 
     set_timer((ELECTION_TIMEOUT + rand() % 100) * 1000, candidate_timeout);
@@ -243,8 +253,9 @@ void candidate()
         short type;
         int break_flag = 0;
 
+        len = sizeof(client_addr);
         if ((size = recvfrom(listen_fd, buf, BUF_SIZE, 0, (struct sockaddr *)&client_addr, &len)) <= 0) {
-            cerr << "[WARNING] Recv data failed" << endl;
+            perror("[WARNING] Recv data failed: ");
             continue;
         }
         memcpy(&type, buf, 2);
@@ -260,7 +271,8 @@ void candidate()
                 vrep.set_votegranted(true);
                 *(short*)buf = voteReply;
                 vrep.SerializeToArray(buf + 2, vrep.ByteSizeLong());
-                sendto(send_fd, buf, vrep.ByteSizeLong() + 2, 0, (const struct sockaddr *)&client_addr, sizeof(client_addr));
+                sendto(listen_fd, buf, vrep.ByteSizeLong() + 2, 0, (const struct sockaddr *)&client_addr, sizeof(client_addr));
+                cerr << "[INFO][Candidate] Vote for " << node_list[vr.candidateid()]  << ", term: " << current_term << endl;
                 break_flag = 1;
                 state = FOLLOWER;
                 break;
@@ -271,6 +283,7 @@ void candidate()
                 vrep.ParseFromArray(buf + 2, size - 2);
                 if (vrep.term() == current_term) {
                     vote_count++;
+                    cerr << "[INFO][Candidate] Received VoteReply, term: " << current_term << ", count: " << vote_count << endl;
                     if (vote_count >= node_num / 2 + 1) {
                         state = LEADER;
                         break_flag = 1;
@@ -308,7 +321,7 @@ void candidate()
 
 void leader()
 {
-    cout << "[INFO] STATE: Leader" << endl;
+    cerr << "[INFO] STATE: Leader" << endl;
     set_timer(BROADCAST_TIME * 1000, leader_heartbeat);
 
     while (1) {
@@ -319,8 +332,9 @@ void leader()
         int size;
         int break_flag = 0;
 
+        len = sizeof(client_addr);
         if ((size = recvfrom(listen_fd, buf, BUF_SIZE, 0, (struct sockaddr *)&client_addr, &len)) <= 0) {
-            cerr << "[WARNING] Recv data failed" << endl;
+            perror("[WARNING] Recv data failed: ");
             continue;
         }
         memcpy(&type, buf, 2);
@@ -336,7 +350,7 @@ void leader()
                 vrep.set_votegranted(true);
                 *(short*)buf = voteReply;
                 vrep.SerializeToArray(buf + 2, vrep.ByteSizeLong());
-                sendto(send_fd, buf, vrep.ByteSizeLong() + 2, 0, (const struct sockaddr *)&client_addr, sizeof(client_addr));
+                sendto(listen_fd, buf, vrep.ByteSizeLong() + 2, 0, (const struct sockaddr *)&client_addr, sizeof(client_addr));
                 break_flag = 1;
                 state = FOLLOWER;
                 break;
@@ -376,12 +390,13 @@ int main(int argc, char **argv) {
     struct sockaddr_in listen_addr;
 
     if (argc != 2) {
-        cout << "Please use ./raft node_id\n"
+        cerr << "Please use ./raft node_id\n"
             << "The nodo_id begins from 0, and should be the same with the order in the nodes.txt\n";
         return 0;
     }
 
     node_id = atoi(argv[1]);
+    srand(node_id);
 
     if (read_nodes("nodes.txt", node_list)) {
         cerr << "[ERROR] Can not read the nodes.txt" << endl;
@@ -406,10 +421,6 @@ int main(int argc, char **argv) {
     self_addr.sin_family = AF_INET;
     self_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     self_addr.sin_port = htons(ELECTION_PORT);
-    if ((send_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        cerr << "[ERROR] Can not create self socket" << endl;
-        exit(-1);
-    }
 
     while (1) {
         switch (state) {
